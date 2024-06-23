@@ -20,6 +20,8 @@ using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Contrib.Extensions.AWSXRay.Trace;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,6 +39,25 @@ builder.Logging.AddOpenTelemetry(options =>
 });
 
 //Add code block to register OpenTelemetry TraceProvider here
+builder.Services.AddOpenTelemetry().WithMetrics((providerBuilder) => providerBuilder
+                                        .AddMeter("VotingMeter")
+                                        .SetResourceBuilder(defaultResource)
+                                        .AddAspNetCoreInstrumentation()
+                                        .AddConsoleExporter()
+                                        .AddOtlpExporter())
+                                    .WithTracing(providerBuilder => providerBuilder
+                                        .SetResourceBuilder(defaultResource)
+                                        .AddSource("Npgsql")
+                                        .AddSource("MassTransit")
+                                        .AddXRayTraceId()
+                                        .AddAWSInstrumentation() //when perform service call to aws services        
+                                        .AddAspNetCoreInstrumentation()
+                                        .AddSqlClientInstrumentation(options => options.SetDbStatementForText = true)
+                                        .AddMassTransitInstrumentation()
+                                        .AddConsoleExporter()
+                                        .AddOtlpExporter()
+                                    );
+Sdk.SetDefaultTextMapPropagator(new AWSXRayPropagator());
 
 builder.Services.AddCors(options =>
             {
