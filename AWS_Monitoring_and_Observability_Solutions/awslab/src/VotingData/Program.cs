@@ -15,12 +15,26 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using VotingData.Models;
 using MassTransit;
+using System.Reflection;
+using OpenTelemetry;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Metrics;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Logging.ClearProviders();
 
 //Add code block to register OpenTelemetry MetricProvider here
+var defaultResource = ResourceBuilder.CreateDefault();
+builder.Logging.AddOpenTelemetry(options =>
+{
+  options.IncludeFormattedMessage = true;
+  options.ParseStateValues = true;
+  options.IncludeScopes = true;
+  options.SetResourceBuilder(defaultResource);
+  options.AddOtlpExporter();        
+});
 
 //Add code block to register OpenTelemetry TraceProvider here
 

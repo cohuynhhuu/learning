@@ -43,6 +43,9 @@ services:
       - "5000:5000"
     networks:
       - monitoring-network
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=VotingApi
     depends_on:
       - rabbitmq  
 
@@ -53,9 +56,23 @@ services:
     volumes:
       - ./src/Worker:/app    
     networks:
-      - monitoring-network     
+      - monitoring-network
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=WorkerService 
     depends_on:
       - rabbitmq 
 
+  otel-collector:    
+    image: otel/opentelemetry-collector-contrib:latest    
+    command: ["--config=/etc/otel-config.yaml"]
+    volumes:        
+      - ./etc/otel-config.yaml:/etc/otel-config.yaml
+    environment:    
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY= ${AWS_SECRET_ACCESS_KEY}
+    ports:
+      - "4317:4317"  
    
   
