@@ -68,6 +68,8 @@ services:
     command: ["--config=/etc/otel-config.yaml"]
     volumes:        
       - ./etc/otel-config.yaml:/etc/otel-config.yaml
+    env_file:
+      - .env
     environment:    
       - AWS_REGION=${AWS_REGION}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
