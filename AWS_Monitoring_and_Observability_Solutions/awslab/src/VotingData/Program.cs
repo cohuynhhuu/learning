@@ -15,49 +15,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using VotingData.Models;
 using MassTransit;
-using System.Reflection;
-using OpenTelemetry;
-using OpenTelemetry.Logs;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Contrib.Extensions.AWSXRay.Trace;
-using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Logging.ClearProviders();
 
 //Add code block to register OpenTelemetry MetricProvider here
-var defaultResource = ResourceBuilder.CreateDefault();
-builder.Logging.AddOpenTelemetry(options =>
-{
-  options.IncludeFormattedMessage = true;
-  options.ParseStateValues = true;
-  options.IncludeScopes = true;
-  options.SetResourceBuilder(defaultResource);
-  options.AddOtlpExporter();        
-});
 
 //Add code block to register OpenTelemetry TraceProvider here
-builder.Services.AddOpenTelemetry().WithMetrics((providerBuilder) => providerBuilder
-                                        .AddMeter("VotingMeter")
-                                        .SetResourceBuilder(defaultResource)
-                                        .AddAspNetCoreInstrumentation()
-                                        .AddConsoleExporter()
-                                        .AddOtlpExporter())
-                                    .WithTracing(providerBuilder => providerBuilder
-                                        .SetResourceBuilder(defaultResource)
-                                        .AddSource("Npgsql")
-                                        .AddSource("MassTransit")
-                                        .AddXRayTraceId()
-                                        .AddAWSInstrumentation() //when perform service call to aws services        
-                                        .AddAspNetCoreInstrumentation()
-                                        .AddSqlClientInstrumentation(options => options.SetDbStatementForText = true)
-                                        .AddMassTransitInstrumentation()
-                                        .AddConsoleExporter()
-                                        .AddOtlpExporter()
-                                    );
-Sdk.SetDefaultTextMapPropagator(new AWSXRayPropagator());
 
 builder.Services.AddCors(options =>
             {

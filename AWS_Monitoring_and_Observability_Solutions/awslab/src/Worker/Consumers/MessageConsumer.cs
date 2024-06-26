@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.Metrics;
 using MassTransit;
 using VotingData.Db;
 using Microsoft.EntityFrameworkCore;
@@ -13,14 +11,12 @@ namespace worker.Consumers;
 public class MessageConsumer : IConsumer<Message>
 {
     private readonly ILogger _logger;     
-    private readonly VotingDBContext dbContext;
-    private Meter meter;
+    private readonly VotingDBContext dbContext; 
 
     public MessageConsumer(ILogger<MessageConsumer> logger,VotingDBContext context)
     {
         _logger = logger;
-        this.dbContext = context;
-        meter = new Meter("VotingMeter","0.0.1");
+        this.dbContext = context;                
     }
 
     public async Task Consume(ConsumeContext<Message> context)
@@ -35,11 +31,6 @@ public class MessageConsumer : IConsumer<Message>
                     dbContext.Entry(candidate).State = EntityState.Modified;                    
 
                     _logger.LogInformation(String.Format("Candidate name {0} has been increased the counter to {1}",candidate.Candidate,candidate.Count));
-
-                    var tags = new TagList();
-                    tags.Add("candidate",candidate.Candidate);            
-                    var counter = meter.CreateCounter<int>("vote.counter");                
-                    counter.Add(1,tags);
 
                     await dbContext.SaveChangesAsync();
                 }
