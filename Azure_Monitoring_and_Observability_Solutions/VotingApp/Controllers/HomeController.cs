@@ -21,9 +21,10 @@ public class HomeController : Controller
         return View();
     }
 
-    public IActionResult Votes()
-    {        
-        return View();
+    public async Task<IActionResult> Votes()
+    {
+        var result = await this.client.GetCountsAsync();
+        return View(result);
     }
 
     public IActionResult Privacy()

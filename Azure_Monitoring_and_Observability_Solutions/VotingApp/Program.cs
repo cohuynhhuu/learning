@@ -1,7 +1,12 @@
-using System.Net.Mime;
-using Microsoft.OpenApi.Models;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Resources;
+using Microsoft.ApplicationInsights.Extensibility;
+using Azure.Monitor.OpenTelemetry.Exporter;
 using VotingApp.Interfaces;
 using VotingApp.Clients;
+using System.Net.Mime;
+using Microsoft.OpenApi.Models;
+using Microsoft.Extensions.Logging.ApplicationInsights;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +27,48 @@ builder.Services.AddHttpClient<IVoteDataClient, VoteDataClient>(c =>
             });
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+builder.Services.AddOpenTelemetryTracing(providerBuilder =>
+                                            {
+                                                providerBuilder
+                                                    .AddConsoleExporter()
+                                                    .AddSource("VotingApp")
+                                                    .SetResourceBuilder(
+                                                        ResourceBuilder.CreateDefault()
+                                                            .AddService(serviceName: "VotingApp", serviceVersion: "1.0.0"))
+                                                    .AddAspNetCoreInstrumentation()
+                                                    .AddHttpClientInstrumentation()        
+                                                    .AddAzureMonitorTraceExporter(o =>
+                                                    {
+                                                        o.ConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"];            
+                                                    });
+                                            });    
+
+//This method gets called by the runtime. Use this method to add services to the container.
+//var appInsightsTelemetryConfiguration = TelemetryConfiguration.CreateDefault();
+//appInsightsTelemetryConfiguration.InstrumentationKey = builder.Configuration["ApplicationInsights:InstrumentationKey"]; 
+
+builder.WebHost.ConfigureLogging((context, logBuilder) =>
+{
+    if (context.HostingEnvironment.IsDevelopment())
+    {
+        logBuilder.AddDebug();
+        logBuilder.AddConsole();
+    }
+
+    logBuilder.AddApplicationInsights(
+            (config) => config.ConnectionString = context.Configuration["ApplicationInsights:ConnectionString"],
+            (options) => { }
+        );
+
+    //Send LogLevel.Debug and higher from all categories to Application Insights
+    logBuilder.AddFilter<ApplicationInsightsLoggerProvider>("", LogLevel.Debug);
+});
+builder.Services.AddApplicationInsightsTelemetry();
+builder.Services.AddHttpClient();
+
+builder.Services.AddApplicationInsightsTelemetryProcessor<FilterOutFastDependencyCallProcessor>(); 
+builder.Services.AddSingleton<ITelemetryInitializer, MyCustomTelemetryInitializer>();
 
 var app = builder.Build();
 
